@@ -1,0 +1,4 @@
+ani-skip??
+sync-play -s
+ --no-detach
+        Don't detach the player (useful for in-terminal playback, mpv only)
