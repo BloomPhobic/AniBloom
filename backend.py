@@ -21,7 +21,7 @@ def search_anime_cli(query):
 
     my_env = os.environ.copy()
     my_env["PATH"] = f"{os.getcwd()}:{my_env.get('PATH', '')}"
-
+    my_env["TERM"] = "xterm-256color" # <--- ADD THIS LINE
     try:
         subprocess.run(["ani-cli", query], env=my_env, capture_output=True)
 
@@ -58,6 +58,7 @@ def get_episode_count_cli(query, index):
 
     my_env = os.environ.copy()
     my_env["PATH"] = f"{os.getcwd()}:{my_env.get('PATH', '')}"
+    my_env["TERM"] = "xterm-256color"
 
     try:
         subprocess.run(["ani-cli", query, "-S", str(index)], env=my_env, capture_output=True)

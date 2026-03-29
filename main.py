@@ -184,7 +184,7 @@ class App(ctk.CTk):
 
     def on_download_episodes(self, episodes_list, page_instance):
         page_instance.log(f"Starting background download for {len(episodes_list)} episodes...")
-        page_instance.toggle_mode() 
+        page_instance.toggle_mode()
         
         # --- NEW: Pin to Top Right Corner! ---
         # relx=0.97 means 97% to the right. rely=0.03 means 3% down from the top.
@@ -224,29 +224,6 @@ class App(ctk.CTk):
                     page_instance.log("❌ " + msg)
                     self.dl_status_label.configure(text="❌ Failed", text_color=Colors.ERROR)
                     self.after(4000, self.floating_dl_frame.place_forget)
-            self.after(0, update_ui)
-
-        threading.Thread(
-            target=backend.download_episodes_native,
-            args=(self.current_query, self.selected_index, episodes_list, update_progress, download_finished),
-            daemon=True
-        ).start()
-
-        def download_finished(success, msg):
-            def update_ui():
-                if self.dl_progress.cget("mode") == "indeterminate":
-                    self.dl_progress.stop()
-                    self.dl_progress.configure(mode="determinate")
-                self.dl_progress.set(1.0) # Fill it to 100%
-                
-                if success:
-                    page_instance.log("✅ " + msg)
-                    self.dl_status_label.configure(text="Download Complete!", text_color=Colors.PRIMARY)
-                    self.dl_speed_label.configure(text="")
-                    self.after(3000, self.download_frame.pack_forget)
-                else:
-                    page_instance.log("❌ " + msg)
-                    self.dl_status_label.configure(text="Download Failed", text_color=Colors.ERROR)
             self.after(0, update_ui)
 
         threading.Thread(
