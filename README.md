@@ -19,11 +19,10 @@ You must have these installed on your system and available in your PATH:
 
 1. Clone the repository:
    ```bash
-   git clone [https://github.com/BloomPhobic/anibloom.git](https://github.com/BloomPhobic/anibloom.git)
+   git clone https://github.com/BloomPhobic/anibloom.git
    cd anibloom
 
 2. Set-up:
-   ```bash
    Run the automated setup script. This will install the Python dependencies and create a shortcut in your application launcher!
    ```bash
    chmod +x setup.sh
