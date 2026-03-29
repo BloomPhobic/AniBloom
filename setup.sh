@@ -23,7 +23,10 @@ echo "✅ Python libraries installed!"
 
 # 3. Create Desktop Shortcut
 echo "🖥️  Creating application shortcut..."
-DESKTOP_FILE="$HOME/.local/share/applications/anibloom.desktop"
+APP_DIR_PATH="$HOME/.local/share/applications"
+mkdir -p "$APP_DIR_PATH"
+
+DESKTOP_FILE="$APP_DIR_PATH/anibloom.desktop"
 APP_DIR=$(pwd)
 
 cat > "$DESKTOP_FILE" << EOF
