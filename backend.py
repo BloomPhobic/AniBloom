@@ -15,35 +15,24 @@ def search_anime_cli(query):
     if not query:
         return False, "Query cannot be empty."
 
-    with open("fzf", "w") as f:
-        f.write("#!/bin/sh\ncat > .ani_results.tmp\nexit 1\n")
-    os.chmod("fzf", 0o755)
+    # --- THE INVINCIBLE TRAP ---
+    trap_script = "#!/bin/sh\ncat > .ani_results.tmp\nexit 1\n"
+    for tool in ["fzf", "rofi", "dmenu", "wofi"]:
+        with open(tool, "w") as f:
+            f.write(trap_script)
+        os.chmod(tool, 0o755)
 
     my_env = os.environ.copy()
     my_env["PATH"] = f"{os.getcwd()}:{my_env.get('PATH', '')}"
     my_env["TERM"] = "xterm-256color"
 
-    # --- DIAGNOSTIC PROBE SETUP ---
-    debug_log = [f"--- DIAGNOSTIC RUN FOR: '{query}' ---"]
-    debug_log.append(f"Current Directory: {os.getcwd()}")
-    debug_log.append(f"Injected PATH: {my_env['PATH']}")
-
     try:
-        # We added text=True so we can easily read the raw terminal output
-        process = subprocess.run(["ani-cli", query], env=my_env, capture_output=True, text=True)
-        
-        debug_log.append(f"Process Return Code: {process.returncode}")
-        debug_log.append(f"--- RAW STDOUT ---\n{process.stdout}\n------------------")
-        debug_log.append(f"--- RAW STDERR ---\n{process.stderr}\n------------------")
+        subprocess.run(["ani-cli", query], env=my_env, capture_output=True)
 
         if os.path.exists(".ani_results.tmp"):
-            debug_log.append("✅ SUCCESS: .ani_results.tmp was created by the fzf trap.")
             with open(".ani_results.tmp", "r") as f:
                 raw_lines = f.readlines()
             
-            debug_log.append(f"Trap caught {len(raw_lines)} lines.")
-            debug_log.append(f"RAW TRAP CONTENTS:\n{raw_lines}")
-
             results = []
             for line in raw_lines:
                 if line.strip():
@@ -53,33 +42,27 @@ def search_anime_cli(query):
             
             os.remove(".ani_results.tmp")
             
-            # Write the debug log to a file
-            with open("debug_log.txt", "w") as f:
-                f.write("\n".join(debug_log))
-                
             if results:
                 return True, results
             else:
                 return False, "No shows found for that query."
         else:
-            debug_log.append("❌ ERROR: .ani_results.tmp WAS NEVER CREATED.")
-            with open("debug_log.txt", "w") as f:
-                f.write("\n".join(debug_log))
             return False, "Failed to trap search results."
             
     except Exception as e:
-        debug_log.append(f"❌ FATAL PYTHON CRASH: {str(e)}")
-        with open("debug_log.txt", "w") as f:
-            f.write("\n".join(debug_log))
         return False, f"System Error: {str(e)}"
     finally:
-        if os.path.exists("fzf"):
-            os.remove("fzf")
+        # Clean up all the fake tools
+        for tool in ["fzf", "rofi", "dmenu", "wofi"]:
+            if os.path.exists(tool):
+                os.remove(tool)
 
 def get_episode_count_cli(query, index):
-    with open("fzf", "w") as f:
-        f.write("#!/bin/sh\ncat > .ani_results.tmp\nexit 1\n")
-    os.chmod("fzf", 0o755)
+    trap_script = "#!/bin/sh\ncat > .ani_results.tmp\nexit 1\n"
+    for tool in ["fzf", "rofi", "dmenu", "wofi"]:
+        with open(tool, "w") as f:
+            f.write(trap_script)
+        os.chmod(tool, 0o755)
 
     my_env = os.environ.copy()
     my_env["PATH"] = f"{os.getcwd()}:{my_env.get('PATH', '')}"
@@ -98,20 +81,16 @@ def get_episode_count_cli(query, index):
             if valid_lines:
                 first_line = valid_lines[0].lower()
                 
-                # Movie filter: Server lists have "http" or ">"
                 if "http" in first_line or ">" in first_line:
                     return True, ["1"]
                 
-                # --- THE NEW HARVESTER ---
                 episodes = []
                 for line in valid_lines:
                     clean = re.sub(r'\x1b\[[0-9;]*[a-zA-Z]', '', line).strip()
-                    # Extract the exact episode number (even 0 or decimals like 1.5)
                     match = re.search(r'\d+(\.\d+)?', clean)
                     if match:
                         episodes.append(match.group())
                 
-                # Remove duplicates and sort them properly (e.g., 0, 1, 2, 3...)
                 episodes = list(set(episodes))
                 try:
                     episodes.sort(key=float)
@@ -130,8 +109,9 @@ def get_episode_count_cli(query, index):
     except Exception as e:
         return False, []
     finally:
-        if os.path.exists("fzf"):
-            os.remove("fzf")
+        for tool in ["fzf", "rofi", "dmenu", "wofi"]:
+            if os.path.exists(tool):
+                os.remove(tool)
 
 def get_video_url_cli(query, index, episode):
     try:
@@ -331,7 +311,6 @@ def clear_history():
         return True
     except Exception:
         return False
-
 
 FAVORITES_FILE = "favorites.json"
 
