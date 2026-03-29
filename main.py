@@ -2,7 +2,8 @@ import customtkinter as ctk
 import threading
 from styles import Colors, Fonts
 import backend
-from pages import MainMenu, ResultsMenu, EpisodeMenu
+from pages import MainMenu, ResultsMenu, EpisodeMenu, SettingsWindow
+from customtkinter import filedialog
 
 class App(ctk.CTk):
     def __init__(self):
@@ -19,20 +20,47 @@ class App(ctk.CTk):
         self.results_page = ResultsMenu(self, self.show_main, self.on_select_anime)
         self.episode_page = EpisodeMenu(self, self.show_results, self.on_play_episode, self.on_download_episodes, self.on_toggle_favorite)
 
-        self.floating_dl_frame = ctk.CTkFrame(self, fg_color=Colors.SURFACE, corner_radius=10, border_width=1, border_color=Colors.BORDER)
+        self.top_nav = ctk.CTkFrame(self, fg_color="transparent")
+        self.top_nav.place(relx=0.98, rely=0.02, anchor="ne")
+
+        self.dl_btn = ctk.CTkButton(self.top_nav, text="⤓", width=35, height=35, font=Fonts.BODY, fg_color="transparent", text_color=Colors.TEXT, hover_color=Colors.SURFACE, command=self.toggle_downloads_box)
+        self.dl_btn.pack(side="left", padx=5)
+
+        self.settings_btn = ctk.CTkButton(self.top_nav, text="⚙️", width=35, height=35, font=Fonts.BODY, fg_color="transparent", text_color=Colors.TEXT, hover_color=Colors.SURFACE, command=self.open_settings)
+        self.settings_btn.pack(side="left", padx=5)
+
+        self.dl_box_visible = False
+        self.dl_box = ctk.CTkFrame(self, width=350, height=350, fg_color=Colors.SURFACE, border_width=1, border_color=Colors.BORDER)
+        self.dl_box.pack_propagate(False)
         
-        self.dl_status_label = ctk.CTkLabel(self.floating_dl_frame, text="⬇️ Preparing...", font=Fonts.BODY_BOLD, text_color=Colors.TEXT)
-        self.dl_status_label.pack(padx=20, pady=(10, 5))
+        self.dl_header = ctk.CTkFrame(self.dl_box, fg_color="transparent")
+        self.dl_header.pack(fill="x", padx=10, pady=10)
+        ctk.CTkLabel(self.dl_header, text="Downloads", font=Fonts.BODY_BOLD, text_color=Colors.TEXT).pack(side="left")
+        ctk.CTkButton(self.dl_header, text="🗑️", width=30, height=24, fg_color="transparent", hover_color=Colors.ERROR, text_color=Colors.TEXT, command=self.clear_download_data).pack(side="right")
+
+        self.active_dl_frame = ctk.CTkFrame(self.dl_box, fg_color=Colors.BG, corner_radius=5)
         
-        self.dl_progress = ctk.CTkProgressBar(self.floating_dl_frame, width=150, height=8, fg_color=Colors.BG, progress_color=Colors.PRIMARY)
+        self.dl_status_label = ctk.CTkLabel(self.active_dl_frame, text="⬇️ Preparing...", font=Fonts.SMALL, text_color=Colors.TEXT)
+        self.dl_status_label.pack(padx=10, pady=(5, 0), anchor="w")
+        
+        self.dl_progress = ctk.CTkProgressBar(self.active_dl_frame, width=390, height=6, fg_color=Colors.SURFACE, progress_color=Colors.PRIMARY)
         self.dl_progress.set(0)
-        self.dl_progress.pack(padx=20, pady=(0, 5))
+        self.dl_progress.pack(padx=10, pady=5)
         
-        self.dl_speed_label = ctk.CTkLabel(self.floating_dl_frame, text="0.0 MiB/s", font=Fonts.SMALL, text_color=Colors.SUBTEXT)
-        self.dl_speed_label.pack(padx=20, pady=(0, 10))
+        self.dl_speed_label = ctk.CTkLabel(self.active_dl_frame, text="0.0 MiB/s", font=Fonts.SMALL, text_color=Colors.SUBTEXT)
+        self.dl_speed_label.pack(padx=10, pady=(0, 5), anchor="w")
+
+        self.dl_history_scroll = ctk.CTkScrollableFrame(self.dl_box, fg_color="transparent")
+        self.dl_history_scroll.pack(fill="both", expand=True, padx=5, pady=5)
+
+        settings = backend.load_settings()
+        self.current_download_path = settings.get("download_path", backend.get_default_download_dir())
+        self.current_quality = settings.get("preferred_quality", "1080p")
+        self.settings_window = None
 
         self.show_main()
         self.refresh_lists()
+        self.refresh_downloads_list()
 
     def hide_all(self):
         self.main_page.pack_forget()
@@ -57,6 +85,61 @@ class App(ctk.CTk):
         
         fav_data = backend.load_favorites()
         self.main_page.populate_favorites(fav_data)
+
+    def toggle_downloads_box(self):
+        if self.dl_box_visible:
+            self.dl_box.place_forget()
+            self.dl_box_visible = False
+        else:
+            self.dl_box.place(relx=0.98, rely=0.07, anchor="ne")
+            self.dl_box.lift()
+            self.dl_box_visible = True
+
+    def refresh_downloads_list(self):
+        for widget in self.dl_history_scroll.winfo_children():
+            widget.destroy()
+            
+        downloads_data = backend.load_downloads_data()
+        
+        if not downloads_data:
+            ctk.CTkLabel(self.dl_history_scroll, text="No downloads yet.", text_color=Colors.SUBTEXT, font=Fonts.BODY).pack(pady=20)
+            return
+            
+        for item in downloads_data:
+            name = item.get('name', 'Unknown')
+            ep = item.get('episode', '?')
+            folder = item.get('folder_path', '')
+            
+            short_name = name[:20] + "..." if len(name) > 20 else name
+            
+            btn = ctk.CTkButton(
+                self.dl_history_scroll, text=f"📁 {short_name} - Ep {ep}", anchor="w",
+                fg_color="transparent", hover_color="#3a3a3a", text_color=Colors.TEXT, font=Fonts.BODY,
+                command=lambda p=folder: backend.open_file_manager(p)
+            )
+            btn.pack(fill="x", pady=2, padx=5)
+
+    def clear_download_data(self):
+        backend.clear_downloads_data()
+        self.refresh_downloads_list()
+
+    def open_settings(self):
+        if self.settings_window is None or not self.settings_window.winfo_exists():
+            self.settings_window = SettingsWindow(self, self.current_quality, self.current_download_path, self.save_settings, self.browse_directory)
+        else:
+            self.settings_window.focus()
+
+    def browse_directory(self, window_instance):
+        new_path = filedialog.askdirectory(title="Select Download Folder")
+        if new_path:
+            self.current_download_path = new_path
+            window_instance.update_path_display(new_path)
+
+    def save_settings(self, new_quality, window_instance):
+        self.current_quality = new_quality
+        # Tell the backend to save the JSON file!
+        backend.save_settings(new_quality, self.current_download_path)
+        window_instance.destroy()
 
     def on_clear_history(self):
         backend.clear_history()
@@ -183,16 +266,22 @@ class App(ctk.CTk):
             page_instance.watch_btn.configure(state="normal", text="▶ Watch Episode")
 
     def on_download_episodes(self, episodes_list, page_instance):
+        anime_name = self.episode_page.title_label.cget("text")
+        short_name = anime_name[:20] + "..." if len(anime_name) > 20 else anime_name
+        
         page_instance.log(f"Starting background download for {len(episodes_list)} episodes...")
         page_instance.toggle_mode()
         
-        # --- NEW: Pin to Top Right Corner! ---
-        # relx=0.97 means 97% to the right. rely=0.03 means 3% down from the top.
-        self.floating_dl_frame.place(relx=0.97, rely=0.03, anchor="ne")
+        if not self.dl_box_visible:
+            self.toggle_downloads_box()
+            
+        self.dl_history_scroll.pack_forget()
+        self.active_dl_frame.pack(fill="x", padx=10, pady=5) # Pack the progress bar first
+        self.dl_history_scroll.pack(fill="both", expand=True, padx=5, pady=5) # Put the history list back underneath
 
         def update_progress(ep, percent, speed_text, is_indeterminate):
             def update_ui():
-                self.dl_status_label.configure(text=f"⬇️ Ep {ep} Downloading", text_color=Colors.TEXT)
+                self.dl_status_label.configure(text=f"⬇️ Ep {ep} - {short_name}", text_color=Colors.TEXT)
                 self.dl_speed_label.configure(text=speed_text)
                 
                 if is_indeterminate:
@@ -218,17 +307,20 @@ class App(ctk.CTk):
                     page_instance.log("✅ " + msg)
                     self.dl_status_label.configure(text="✅ Complete!", text_color=Colors.PRIMARY)
                     self.dl_speed_label.configure(text="")
-                    # Hide the floating widget after 4 seconds
-                    self.after(4000, self.floating_dl_frame.place_forget)
                 else:
                     page_instance.log("❌ " + msg)
                     self.dl_status_label.configure(text="❌ Failed", text_color=Colors.ERROR)
-                    self.after(4000, self.floating_dl_frame.place_forget)
+                
+                self.refresh_downloads_list()
+                self.after(3000, self.active_dl_frame.pack_forget)
             self.after(0, update_ui)
+
+        def single_ep_done():
+            self.after(0, self.refresh_downloads_list)
 
         threading.Thread(
             target=backend.download_episodes_native,
-            args=(self.current_query, self.selected_index, episodes_list, update_progress, download_finished),
+            args=(self.current_query, self.selected_index, episodes_list, anime_name, update_progress, download_finished, single_ep_done),
             daemon=True
         ).start()
 

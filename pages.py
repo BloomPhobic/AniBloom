@@ -125,17 +125,17 @@ class EpisodeMenu(ctk.CTkFrame):
     def __init__(self, master, back_callback, play_callback, download_callback, fav_callback):
         super().__init__(master, fg_color="transparent")
         self.play_callback = play_callback
-        self.download_callback = download_callback 
-        self.fav_callback = fav_callback 
+        self.download_callback = download_callback
+        self.fav_callback = fav_callback
         
         self.current_ep_page = 0
         self.eps_per_page = 26
-        self.episodes_list = [] 
-        self.watched_episodes = [] # <-- NEW: Track watched episodes
+        self.episodes_list = []
+        self.watched_episodes = []
         self.total_episodes = 0
         
-        self.download_mode = False      
-        self.selected_episodes = set()  
+        self.download_mode = False
+        self.selected_episodes = set()
 
         nav = ctk.CTkFrame(self, fg_color="transparent")
         nav.pack(fill="x", pady=5, padx=20)
@@ -332,3 +332,53 @@ class EpisodeMenu(ctk.CTkFrame):
             return
         self.watch_btn.configure(state="disabled", text="Extracting...")
         self.play_callback(ep, self)
+
+class SettingsWindow(ctk.CTkToplevel):
+    def __init__(self, master, current_quality, current_path, save_callback, browse_callback):
+        super().__init__(master)
+        self.title("Settings")
+        self.geometry("450x300")
+        self.configure(fg_color=Colors.BG)
+        self.attributes("-topmost", True)
+        self.resizable(False, False)
+
+        # --- CENTER THE WINDOW ---
+        self.update_idletasks() # Ensure geometry is calculated
+        x = (self.winfo_screenwidth() // 2) - (450 // 2)
+        y = (self.winfo_screenheight() // 2) - (300 // 2)
+        self.geometry(f"+{x}+{y}") # Tell the OS to place it here
+
+        title = ctk.CTkLabel(self, text="⚙️ Preferences", font=Fonts.HEADER, text_color=Colors.TEXT)
+        title.pack(pady=(20, 20))
+
+        # (Rest of your quality and path code remains the same as before...)
+        qual_frame = ctk.CTkFrame(self, fg_color="transparent")
+        qual_frame.pack(fill="x", padx=30, pady=10)
+        ctk.CTkLabel(qual_frame, text="Preferred Quality:", font=Fonts.BODY_BOLD, text_color=Colors.TEXT).pack(side="left")
+        
+        self.quality_var = ctk.StringVar(value=current_quality)
+        self.quality_menu = ctk.CTkOptionMenu(qual_frame, values=["1080p", "720p", "480p", "Best Available"], variable=self.quality_var, fg_color=Colors.SURFACE, button_color=Colors.PRIMARY, button_hover_color=Colors.PRIMARY_HOVER)
+        self.quality_menu.pack(side="right")
+
+        loc_frame = ctk.CTkFrame(self, fg_color="transparent")
+        loc_frame.pack(fill="x", padx=30, pady=10)
+        ctk.CTkLabel(loc_frame, text="Download Location:", font=Fonts.BODY_BOLD, text_color=Colors.TEXT).pack(anchor="w")
+        
+        path_controls = ctk.CTkFrame(loc_frame, fg_color="transparent")
+        path_controls.pack(fill="x", pady=5)
+        
+        self.path_entry = ctk.CTkEntry(path_controls, state="disabled", fg_color=Colors.SURFACE)
+        self.path_entry.pack(side="left", fill="x", expand=True, padx=(0, 10))
+        self.update_path_display(current_path)
+
+        self.browse_btn = ctk.CTkButton(path_controls, text="Browse...", width=80, fg_color=Colors.SECONDARY, hover_color=Colors.SECONDARY_HOVER, command=lambda: browse_callback(self))
+        self.browse_btn.pack(side="right")
+
+        self.save_btn = ctk.CTkButton(self, text="Save Settings", font=Fonts.BODY_BOLD, fg_color=Colors.PRIMARY, hover_color=Colors.PRIMARY_HOVER, command=lambda: save_callback(self.quality_var.get(), self))
+        self.save_btn.pack(side="bottom", pady=20)
+
+    def update_path_display(self, path):
+        self.path_entry.configure(state="normal")
+        self.path_entry.delete(0, "end")
+        self.path_entry.insert(0, path)
+        self.path_entry.configure(state="disabled")

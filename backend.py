@@ -3,8 +3,76 @@ import os
 import re
 import shutil
 import json
+import platform
+from pathlib import Path
 
 HISTORY_FILE = "watch_history.json"
+
+
+SETTINGS_FILE = "settings.json"
+DOWNLOADS_DATA_FILE = "downloads.json"
+
+def get_default_download_dir():
+    # Automatically finds the true ~/Downloads folder on Linux/Mac/Windows
+    return str(Path.home() / "Downloads")
+
+def load_settings():
+    default_settings = {
+        "preferred_quality": "1080p",
+        "download_path": get_default_download_dir()
+    }
+    if not os.path.exists(SETTINGS_FILE):
+        return default_settings
+    try:
+        with open(SETTINGS_FILE, "r") as f:
+            data = json.load(f)
+            return {**default_settings, **data} # Merges defaults in case keys are missing
+    except Exception:
+        return default_settings
+
+def save_settings(quality, path):
+    settings = {
+        "preferred_quality": quality,
+        "download_path": path
+    }
+    with open(SETTINGS_FILE, "w") as f:
+        json.dump(settings, f, indent=4)
+
+def load_downloads_data():
+    if not os.path.exists(DOWNLOADS_DATA_FILE):
+        return []
+    try:
+        with open(DOWNLOADS_DATA_FILE, "r") as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+def save_download_data(anime_name, episode, folder_path):
+    downloads = load_downloads_data()
+    downloads.insert(0, {
+        "name": anime_name,
+        "episode": str(episode),
+        "folder_path": folder_path
+    })
+    with open(DOWNLOADS_DATA_FILE, "w") as f:
+        json.dump(downloads, f, indent=4)
+
+def clear_downloads_data():
+    if os.path.exists(DOWNLOADS_DATA_FILE):
+        with open(DOWNLOADS_DATA_FILE, "w") as f:
+            json.dump([], f)
+
+def open_file_manager(path):
+    """Safely opens the system's native file manager."""
+    try:
+        if platform.system() == "Windows":
+            os.startfile(path)
+        elif platform.system() == "Darwin":
+            subprocess.Popen(["open", path])
+        else: # Linux
+            subprocess.Popen(["xdg-open", path])
+    except Exception as e:
+        print(f"Failed to open file manager: {e}")
 
 def clean_anime_title(raw_title):
     clean = re.sub(r'\[\d+[^\]]*\]|\(\d+[^\)]*\)', '', raw_title)
@@ -183,26 +251,47 @@ def play_video_cli(url):
     except Exception as e:
         return False, str(e)
 
-def download_episodes_native(query, index, episodes_list, progress_callback, finished_callback):
+def download_episodes_native(query, index, episodes_list, anime_name, progress_callback, finished_callback, single_finished_callback=None):
     if not episodes_list:
         finished_callback(False, "No episodes selected.")
         return
 
+    settings = load_settings()
+    # Correctly expands ~/Downloads to /home/bloom/Downloads
+    download_dir = os.path.expanduser(settings.get("download_path", get_default_download_dir()))
+    quality = settings.get("preferred_quality", "1080p")
+    
+    os.makedirs(download_dir, exist_ok=True)
+
     sorted_eps = sorted(episodes_list, key=lambda x: float(x) if x.replace('.','',1).isdigit() else 0)
 
+    original_cwd = os.getcwd()
     my_env = os.environ.copy()
-    my_env["PATH"] = f"{os.getcwd()}:{my_env.get('PATH', '')}"
+    my_env["PATH"] = f"{original_cwd}:{my_env.get('PATH', '')}"
+    my_env["TERM"] = "xterm-256color"
 
-    for ep in sorted_eps:
-        progress_callback(ep, 0.0, "Connecting...", False)
-        
-        # --- THE MAGIC FIX ---
-        # Wrapping it in 'script' creates a Fake Terminal so yt-dlp doesn't hide its progress bar!
-        cmd_str = f"ani-cli '{query}' -S {index} -d -e {ep}"
-        command = ["script", "-q", "-e", "-c", cmd_str, "/dev/null"]
-        
-        try:
-            process = subprocess.Popen(command, env=my_env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    # REVERTED to the original trap that worked for you!
+    trap_script = "#!/bin/sh\ncat > .ani_results.tmp\nexit 1\n"
+    for tool in ["fzf", "rofi", "dmenu", "wofi"]:
+        tool_path = os.path.join(original_cwd, tool)
+        with open(tool_path, "w") as f:
+            f.write(trap_script)
+        os.chmod(tool_path, 0o755)
+
+    try:
+        for ep in sorted_eps:
+            progress_callback(ep, 0.0, "Connecting...", False)
+            
+            # REVERTED to the original quality flag and script wrapper!
+            q_flag = ""
+            if quality != "Best Available":
+                q_flag = f" -q {quality.replace('p', '')}"
+                
+            safe_query = query.replace("'", "'\\''")
+            cmd_str = f"ani-cli '{safe_query}' -S {index} -d -e {ep}{q_flag}"
+            command = ["script", "-q", "-e", "-c", cmd_str, "/dev/null"]
+            
+            process = subprocess.Popen(command, env=my_env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=download_dir)
             
             buffer = ""
             while True:
@@ -249,12 +338,20 @@ def download_episodes_native(query, index, episodes_list, progress_callback, fin
             if process.returncode != 0:
                 finished_callback(False, f"Failed to download Episode {ep}.")
                 return
-                
-        except Exception as e:
-            finished_callback(False, f"System Error: {str(e)}")
-            return
-
-    finished_callback(True, "All downloads finished successfully!")
+            else:
+                save_download_data(anime_name, ep, download_dir)
+                if single_finished_callback:
+                    single_finished_callback()
+                    
+        finished_callback(True, "All downloads finished successfully!")
+        
+    except Exception as e:
+        finished_callback(False, f"System Error: {str(e)}")
+    finally:
+        for tool in ["fzf", "rofi", "dmenu", "wofi"]:
+            tool_path = os.path.join(original_cwd, tool)
+            if os.path.exists(tool_path):
+                os.remove(tool_path)
 
 def load_history():
     if not os.path.exists(HISTORY_FILE):
