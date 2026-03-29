@@ -1,4 +1,3 @@
-```bash
 #!/bin/bash
 
 echo "🌸 Welcome to the AniBloom Installer 🌸"
