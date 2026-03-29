@@ -172,38 +172,83 @@ def get_video_url_cli(query, index, episode):
 def play_video_cli(url):
     clean_url = url.strip().strip("'\"")
     try:
-        subprocess.Popen(["mpv", clean_url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        return True, "Player launched successfully."
+        subprocess.run(["mpv", clean_url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return True, "Player closed."
     except Exception as e:
         return False, str(e)
 
-def download_episodes_cli(query, index, episodes_list):
+def download_episodes_native(query, index, episodes_list, progress_callback, finished_callback):
     if not episodes_list:
-        return False, "No episodes selected."
+        finished_callback(False, "No episodes selected.")
+        return
 
-    terminals = ["kitty", "alacritty", "konsole", "gnome-terminal", "xfce4-terminal", "xterm"]
-    chosen_term = next((term for term in terminals if shutil.which(term)), None)
-    
-    if not chosen_term:
-        return False, "Could not find a standard terminal to show download progress."
+    sorted_eps = sorted(episodes_list, key=lambda x: float(x) if x.replace('.','',1).isdigit() else 0)
+
+    my_env = os.environ.copy()
+    my_env["PATH"] = f"{os.getcwd()}:{my_env.get('PATH', '')}"
+
+    for ep in sorted_eps:
+        progress_callback(ep, 0.0, "Connecting...", False)
         
-    try:
-        commands = []
-        # Sorts the strings numerically before downloading
-        for ep in sorted(episodes_list, key=lambda x: float(x) if x.replace('.','',1).isdigit() else 0):
-            commands.append(f"echo '▶ Starting Episode {ep}...'; ani-cli '{query}' -S {index} -d -e {ep}")
-            
-        full_command = " && ".join(commands)
-        bash_cmd = f"{full_command}; echo ''; echo '✅ All downloads finished! Press Enter to close.'; read"
+        # --- THE MAGIC FIX ---
+        # Wrapping it in 'script' creates a Fake Terminal so yt-dlp doesn't hide its progress bar!
+        cmd_str = f"ani-cli '{query}' -S {index} -d -e {ep}"
+        command = ["script", "-q", "-e", "-c", cmd_str, "/dev/null"]
         
-        if chosen_term in ["gnome-terminal", "xfce4-terminal"]:
-            subprocess.Popen([chosen_term, "--", "bash", "-c", bash_cmd])
-        else:
-            subprocess.Popen([chosen_term, "-e", "bash", "-c", bash_cmd])
+        try:
+            process = subprocess.Popen(command, env=my_env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             
-        return True, f"Download launched in a new {chosen_term} window!"
-    except Exception as e:
-        return False, f"Failed to launch terminal: {str(e)}"
+            buffer = ""
+            while True:
+                char_bytes = process.stdout.read(1)
+                if not char_bytes and process.poll() is not None:
+                    break
+                    
+                try:
+                    char = char_bytes.decode('utf-8', errors='ignore')
+                except Exception:
+                    continue
+
+                if char in ['\r', '\n']:
+                    line = buffer.strip()
+                    buffer = ""
+                    if not line:
+                        continue
+                        
+                    clean_line = re.sub(r'\x1b\[[0-9;]*[a-zA-Z]', '', line)
+                    
+                    if "%" in clean_line and "at" in clean_line:
+                        try:
+                            percent_str = re.search(r'(\d+\.?\d*)%', clean_line)
+                            speed_str = re.search(r'at\s+([^ ]+)', clean_line)
+                            if percent_str:
+                                percent = float(percent_str.group(1)) / 100.0
+                                speed = speed_str.group(1) if speed_str else "Unknown Speed"
+                                progress_callback(ep, percent, speed, False)
+                        except Exception: pass
+                        
+                    elif "size=" in clean_line and "time=" in clean_line:
+                        try:
+                            size_match = re.search(r'size=\s*([^ ]+)', clean_line)
+                            speed_match = re.search(r'speed=\s*([^ ]+)', clean_line)
+                            size = size_match.group(1) if size_match else ""
+                            speed = speed_match.group(1) if speed_match else ""
+                            progress_callback(ep, 0.0, f"{size} | Spd: {speed}", True)
+                        except Exception: pass
+                else:
+                    buffer += char
+
+            process.wait()
+            
+            if process.returncode != 0:
+                finished_callback(False, f"Failed to download Episode {ep}.")
+                return
+                
+        except Exception as e:
+            finished_callback(False, f"System Error: {str(e)}")
+            return
+
+    finished_callback(True, "All downloads finished successfully!")
 
 def load_history():
     if not os.path.exists(HISTORY_FILE):
@@ -216,18 +261,37 @@ def load_history():
 
 def save_to_history(anime_name, episode, query="", index=1):
     history = load_history()
+    
+    # Check if we already have watched episodes for this show
+    existing_item = next((item for item in history if item.get('name') == anime_name), None)
+    watched_eps = existing_item.get('watched_eps', []) if existing_item else []
+    
+    # Add the new episode if it isn't already marked
+    if str(episode) not in watched_eps:
+        watched_eps.append(str(episode))
+        
     history = [item for item in history if item.get('name') != anime_name]
     
     history.insert(0, {
-        "name": anime_name, 
-        "episode": episode,
+        "name": anime_name,
+        "episode": str(episode),
         "query": query,
-        "index": index
+        "index": index,
+        "watched_eps": watched_eps # Save the array to the file!
     })
     
     history = history[:10]
     with open(HISTORY_FILE, "w") as f:
         json.dump(history, f, indent=4)
+        
+    return watched_eps
+
+def get_watched_episodes(anime_name):
+    history = load_history()
+    for item in history:
+        if item.get('name') == anime_name:
+            return item.get('watched_eps', [])
+    return []
 
 def clear_history():
     if os.path.exists(HISTORY_FILE):
@@ -241,3 +305,43 @@ def clear_history():
         return True
     except Exception:
         return False
+
+
+FAVORITES_FILE = "favorites.json"
+
+def load_favorites():
+    if not os.path.exists(FAVORITES_FILE):
+        return []
+    try:
+        with open(FAVORITES_FILE, "r") as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+def toggle_favorite(anime_name, query="", index=1):
+    favs = load_favorites()
+    
+    # Check if it already exists
+    exists = any(item.get('name') == anime_name for item in favs)
+    
+    if exists:
+        # Remove it
+        favs = [item for item in favs if item.get('name') != anime_name]
+        state = False
+    else:
+        # Add it to the top
+        favs.insert(0, {
+            "name": anime_name,
+            "query": query,
+            "index": index
+        })
+        state = True
+        
+    with open(FAVORITES_FILE, "w") as f:
+        json.dump(favs, f, indent=4)
+        
+    return state
+
+def is_favorite(anime_name):
+    favs = load_favorites()
+    return any(item.get('name') == anime_name for item in favs)

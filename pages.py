@@ -2,7 +2,6 @@ import customtkinter as ctk
 from styles import Colors, Fonts
 
 class MainMenu(ctk.CTkFrame):
-    # --- NEW: Added clear_history_callback ---
     def __init__(self, master, search_callback, history_callback, clear_history_callback):
         super().__init__(master, fg_color="transparent")
         self.search_callback = search_callback
@@ -21,22 +20,30 @@ class MainMenu(ctk.CTkFrame):
         self.search_btn = ctk.CTkButton(self, text="Search", width=200, height=40, font=Fonts.BODY_BOLD, fg_color=Colors.PRIMARY, hover_color=Colors.PRIMARY_HOVER, command=self.handle_search)
         self.search_btn.pack(pady=20)
 
-        # --- History UI Area ---
+        # --- Tabbed UI Area ---
         self.history_container = ctk.CTkFrame(self, fg_color="transparent")
         self.history_container.pack(pady=(20, 0), fill="x", padx=100)
         
-        # --- NEW: A top bar to hold the Title on the left, and the Clear button on the right ---
         self.history_top_bar = ctk.CTkFrame(self.history_container, fg_color="transparent")
-        self.history_top_bar.pack(fill="x", pady=(0, 10))
+        self.history_top_bar.pack(fill="x", pady=(0, 5))
         
-        self.history_label = ctk.CTkLabel(self.history_top_bar, text="Continue Watching", font=Fonts.HEADER, text_color=Colors.TEXT)
+        self.history_label = ctk.CTkLabel(self.history_top_bar, text="Your Library", font=Fonts.HEADER, text_color=Colors.TEXT)
         self.history_label.pack(side="left")
         
-        self.clear_btn = ctk.CTkButton(self.history_top_bar, text="🗑️ Clear", width=60, height=28, fg_color=Colors.ERROR, hover_color="#cc0000", font=Fonts.SMALL, command=clear_history_callback)
+        self.clear_btn = ctk.CTkButton(self.history_top_bar, text="🗑️ Clear History", width=60, height=28, fg_color=Colors.ERROR, hover_color="#cc0000", font=Fonts.SMALL, command=clear_history_callback)
         self.clear_btn.pack(side="right")
         
-        self.history_list = ctk.CTkScrollableFrame(self.history_container, height=180, fg_color=Colors.SURFACE)
-        self.history_list.pack(fill="x")
+        # --- NEW: The Tabview ---
+        self.tabview = ctk.CTkTabview(self.history_container, height=220, fg_color=Colors.SURFACE, segmented_button_selected_color=Colors.PRIMARY, segmented_button_selected_hover_color=Colors.PRIMARY_HOVER)
+        self.tabview.pack(fill="x")
+        self.tabview.add("Recent History")
+        self.tabview.add("Favorites")
+
+        self.history_scroll = ctk.CTkScrollableFrame(self.tabview.tab("Recent History"), fg_color="transparent")
+        self.history_scroll.pack(fill="both", expand=True)
+
+        self.fav_scroll = ctk.CTkScrollableFrame(self.tabview.tab("Favorites"), fg_color="transparent")
+        self.fav_scroll.pack(fill="both", expand=True)
 
     def handle_search(self, event=None):
         query = self.search_bar.get().strip()
@@ -45,56 +52,42 @@ class MainMenu(ctk.CTkFrame):
             self.search_callback(query, self)
 
     def populate_history(self, history_data):
-        for widget in self.history_list.winfo_children():
+        for widget in self.history_scroll.winfo_children():
             widget.destroy()
             
         if not history_data:
-            ctk.CTkLabel(self.history_list, text="Your watch history is empty. Go watch something!", text_color=Colors.SUBTEXT, font=Fonts.BODY).pack(pady=30)
-            self.clear_btn.configure(state="disabled") # Disable button if empty
+            ctk.CTkLabel(self.history_scroll, text="Your watch history is empty.", text_color=Colors.SUBTEXT, font=Fonts.BODY).pack(pady=30)
+            self.clear_btn.configure(state="disabled")
             return
             
-        self.clear_btn.configure(state="normal") # Enable button if there is data
+        self.clear_btn.configure(state="normal")
             
         for item in history_data:
             name = item.get('name', 'Unknown')
             ep = item.get('episode', '1')
             
-            btn_text = f"▶  {name}  |  Last watched: Ep {ep}"
             btn = ctk.CTkButton(
-                self.history_list, text=btn_text, anchor="w", 
+                self.history_scroll, text=f"▶  {name}  |  Last watched: Ep {ep}", anchor="w",
                 fg_color="transparent", hover_color="#3a3a3a", text_color=Colors.TEXT, font=Fonts.BODY,
-                command=lambda data=item: self.handle_history_click(data) 
+                command=lambda data=item: self.handle_history_click(data)
             )
             btn.pack(fill="x", pady=2, padx=5)
 
-    def handle_history_click(self, item_data):
-        self.history_label.configure(text=f"Loading '{item_data.get('name', '')}'...")
-        self.history_callback(item_data)
-
-    def handle_search(self, event=None):
-        query = self.search_bar.get().strip()
-        if query:
-            self.search_btn.configure(text="Scraping...", state="disabled")
-            self.search_callback(query, self)
-
-    def populate_history(self, history_data):
-        for widget in self.history_list.winfo_children():
+    def populate_favorites(self, fav_data):
+        for widget in self.fav_scroll.winfo_children():
             widget.destroy()
             
-        if not history_data:
-            ctk.CTkLabel(self.history_list, text="Your watch history is empty. Go watch something!", text_color=Colors.SUBTEXT, font=Fonts.BODY).pack(pady=30)
+        if not fav_data:
+            ctk.CTkLabel(self.fav_scroll, text="No favorites yet. Go star some anime!", text_color=Colors.SUBTEXT, font=Fonts.BODY).pack(pady=30)
             return
             
-        for item in history_data:
+        for item in fav_data:
             name = item.get('name', 'Unknown')
-            ep = item.get('episode', '1')
             
-            btn_text = f"▶  {name}  |  Last watched: Ep {ep}"
             btn = ctk.CTkButton(
-                self.history_list, text=btn_text, anchor="w", 
-                fg_color="transparent", hover_color="#3a3a3a", text_color=Colors.TEXT, font=Fonts.BODY,
-                # --- UPDATED: Pass the WHOLE dictionary item, not just the name ---
-                command=lambda data=item: self.handle_history_click(data) 
+                self.fav_scroll, text=f"⭐  {name}", anchor="w",
+                fg_color="transparent", hover_color="#3a3a3a", text_color=Colors.SECONDARY, font=Fonts.BODY_BOLD,
+                command=lambda data=item: self.handle_history_click(data)
             )
             btn.pack(fill="x", pady=2, padx=5)
 
@@ -129,15 +122,16 @@ class ResultsMenu(ctk.CTkFrame):
 
 
 class EpisodeMenu(ctk.CTkFrame):
-    def __init__(self, master, back_callback, play_callback, download_callback):
+    def __init__(self, master, back_callback, play_callback, download_callback, fav_callback):
         super().__init__(master, fg_color="transparent")
         self.play_callback = play_callback
         self.download_callback = download_callback 
+        self.fav_callback = fav_callback 
         
-        # --- UPDATED VARIABLES ---
         self.current_ep_page = 0
         self.eps_per_page = 26
-        self.episodes_list = [] # Store the exact array from the backend
+        self.episodes_list = [] 
+        self.watched_episodes = [] # <-- NEW: Track watched episodes
         self.total_episodes = 0
         
         self.download_mode = False      
@@ -148,8 +142,14 @@ class EpisodeMenu(ctk.CTkFrame):
         self.back_btn = ctk.CTkButton(nav, text="< Back", width=60, fg_color="transparent", hover_color=Colors.SURFACE, border_width=1, border_color=Colors.BORDER, text_color=Colors.TEXT, command=back_callback)
         self.back_btn.pack(side="left")
 
-        self.title_label = ctk.CTkLabel(self, text="Anime Name", font=Fonts.HEADER, text_color=Colors.TEXT, wraplength=700)
-        self.title_label.pack(pady=(5, 5))
+        self.title_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.title_frame.pack(pady=(5, 5))
+        
+        self.title_label = ctk.CTkLabel(self.title_frame, text="Anime Name", font=Fonts.HEADER, text_color=Colors.TEXT, wraplength=600)
+        self.title_label.pack(side="left", padx=10)
+        
+        self.fav_btn = ctk.CTkButton(self.title_frame, text="☆", width=40, font=("Helvetica", 20), fg_color="transparent", hover_color=Colors.SURFACE, text_color=Colors.SUBTEXT, command=self.handle_fav_click)
+        self.fav_btn.pack(side="left")
 
         self.mode_frame = ctk.CTkFrame(self, fg_color="transparent")
         self.mode_frame.pack(pady=5)
@@ -189,26 +189,35 @@ class EpisodeMenu(ctk.CTkFrame):
         self.console = ctk.CTkTextbox(self, width=650, height=130, text_color=Colors.SUBTEXT, fg_color=Colors.SURFACE)
         self.console.pack(pady=10)
 
+    def handle_fav_click(self):
+        is_now_fav = self.fav_callback()
+        self.set_fav_visuals(is_now_fav)
+
+    def set_fav_visuals(self, is_fav):
+        if is_fav:
+            self.fav_btn.configure(text="★", text_color=Colors.SECONDARY) 
+        else:
+            self.fav_btn.configure(text="☆", text_color=Colors.SUBTEXT)   
+
     def toggle_mode(self):
         self.download_mode = not self.download_mode
         if self.download_mode:
             self.toggle_mode_btn.configure(text="❌ Cancel Download Mode", fg_color=Colors.ERROR, hover_color="#cc0000")
-            self.watch_controls.pack_forget()  
-            self.dl_controls.pack(side="top", pady=5) 
+            self.watch_controls.pack_forget()
+            self.dl_controls.pack(side="top", pady=5)
             self.log("ℹ️ Download Mode active. Click episodes to select them.")
         else:
             self.toggle_mode_btn.configure(text="🔄 Switch to Download Mode", fg_color=Colors.SECONDARY, hover_color=Colors.SECONDARY_HOVER)
             self.dl_controls.pack_forget()
             self.watch_controls.pack(pady=10)
-            self.selected_episodes.clear() 
+            self.selected_episodes.clear()
             self.log("ℹ️ Returned to Watch Mode.")
-        self.draw_grid() 
+        self.draw_grid()
 
     def select_all_eps(self):
         start_idx = self.current_ep_page * self.eps_per_page
         end_idx = min(start_idx + self.eps_per_page, self.total_episodes)
         
-        # Add exact episode names to the selection
         for i in range(start_idx, end_idx):
             self.selected_episodes.add(self.episodes_list[i])
             
@@ -240,7 +249,6 @@ class EpisodeMenu(ctk.CTkFrame):
         start_idx = self.current_ep_page * self.eps_per_page
         end_idx = min(start_idx + self.eps_per_page, self.total_episodes)
         
-        # Display the real names in the page nav! (e.g. Eps 0 - 25)
         if self.total_episodes > 0:
             first_ep = self.episodes_list[start_idx]
             last_ep = self.episodes_list[end_idx - 1]
@@ -255,16 +263,24 @@ class EpisodeMenu(ctk.CTkFrame):
         page_eps = self.episodes_list[start_idx:end_idx]
         
         for i, ep_str in enumerate(page_eps):
+            # --- THE NEW COLOR LOGIC ---
             if self.download_mode and ep_str in self.selected_episodes:
                 bg = Colors.PRIMARY
                 hover = Colors.PRIMARY_HOVER
+                text_color = Colors.TEXT
+            elif ep_str in self.watched_episodes:
+                # Dim the button if it has been watched!
+                bg = Colors.BG 
+                hover = Colors.SURFACE
+                text_color = Colors.SUBTEXT 
             else:
                 bg = Colors.SURFACE
                 hover = Colors.PRIMARY_HOVER
+                text_color = Colors.TEXT
 
             btn = ctk.CTkButton(
                 self.grid_frame, text=ep_str, width=45, height=40, font=Fonts.BODY_BOLD,
-                fg_color=bg, hover_color=hover, border_width=1, border_color=Colors.BORDER,
+                fg_color=bg, hover_color=hover, text_color=text_color, border_width=1, border_color=Colors.BORDER,
                 command=lambda e=ep_str: self.grid_click(e)
             )
             row = i // cols
@@ -280,11 +296,13 @@ class EpisodeMenu(ctk.CTkFrame):
             self.current_ep_page -= 1
             self.draw_grid()
 
-    def setup(self, name, episodes_list):
-        self.episodes_list = [str(e) for e in episodes_list] # Ensure they are string labels
+    def setup(self, name, episodes_list, is_fav, watched_eps):
+        self.episodes_list = [str(e) for e in episodes_list]
+        self.watched_episodes = [str(e) for e in watched_eps] # Save the watched data!
         self.total_episodes = len(self.episodes_list)
         
         self.title_label.configure(text=name)
+        self.set_fav_visuals(is_fav) 
         self.console.delete("1.0", "end")
         
         if self.download_mode:
@@ -298,7 +316,6 @@ class EpisodeMenu(ctk.CTkFrame):
             
         self.ep_input.delete(0, "end")
         if self.episodes_list:
-            # Auto-insert the exact first label! (If it's 0, it puts 0)
             self.ep_input.insert(0, self.episodes_list[0])
             
         self.current_ep_page = 0
@@ -310,11 +327,8 @@ class EpisodeMenu(ctk.CTkFrame):
 
     def handle_play(self, event=None):
         ep = self.ep_input.get().strip()
-        
-        # We only check if it's empty, so "0" or "1.5" still works!
         if not ep:
             self.log("❌ ERROR: Please enter an episode number.")
             return
-            
         self.watch_btn.configure(state="disabled", text="Extracting...")
         self.play_callback(ep, self)

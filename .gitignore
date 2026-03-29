@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 
 watch_history.json
+favorites.json
 
 fzf
 .ani_results.tmp
