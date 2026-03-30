@@ -1,5 +1,7 @@
 import customtkinter as ctk
 import threading
+import os
+from PIL import Image, ImageTk
 from styles import Colors, Fonts
 import backend
 from pages import MainMenu, ResultsMenu, EpisodeMenu, SettingsWindow
@@ -13,6 +15,15 @@ class App(ctk.CTk):
         ctk.set_appearance_mode("dark")
         self.configure(fg_color=Colors.BG)
 
+        try:
+            icon_path = os.path.join(os.path.dirname(__file__), "icon.png")
+            if os.path.exists(icon_path):
+                img = Image.open(icon_path)
+                photo = ImageTk.PhotoImage(img)
+                self.wm_iconphoto(True, photo)
+        except Exception as e:
+            print(f"Could not load icon: {e}")
+
         self.current_query = ""
         self.selected_index = 0
 
@@ -23,10 +34,18 @@ class App(ctk.CTk):
         self.top_nav = ctk.CTkFrame(self, fg_color="transparent")
         self.top_nav.place(relx=0.98, rely=0.02, anchor="ne")
 
-        self.dl_btn = ctk.CTkButton(self.top_nav, text="⤓", width=35, height=35, font=Fonts.BODY, fg_color="transparent", text_color=Colors.TEXT, hover_color=Colors.SURFACE, command=self.toggle_downloads_box)
+        self.dl_btn = ctk.CTkButton(
+            self.top_nav, text="⤓", width=40, height=40, font=("Helvetica", 24),
+            fg_color="transparent", text_color=Colors.TEXT, hover_color=Colors.PRIMARY_HOVER,
+            command=self.toggle_downloads_box
+        )
         self.dl_btn.pack(side="left", padx=5)
 
-        self.settings_btn = ctk.CTkButton(self.top_nav, text="⚙️", width=35, height=35, font=Fonts.BODY, fg_color="transparent", text_color=Colors.TEXT, hover_color=Colors.SURFACE, command=self.open_settings)
+        self.settings_btn = ctk.CTkButton(
+            self.top_nav, text="⚙️", width=40, height=40, font=("Helvetica", 24),
+            fg_color="transparent", text_color=Colors.TEXT, hover_color=Colors.PRIMARY_HOVER,
+            command=self.open_settings
+        )
         self.settings_btn.pack(side="left", padx=5)
 
         self.dl_box_visible = False

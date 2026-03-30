@@ -1,3 +1,0 @@
-#!/bin/sh
-cat > .ani_results.tmp
-exit 1

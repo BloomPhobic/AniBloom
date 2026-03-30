@@ -1,15 +1,17 @@
 class Colors:
-    """Centralized color palette for the application."""
-    BG = "#1a1a1a"             # Deep dark background
-    SURFACE = "#2b2b2b"        # Slightly lighter for frames/scroll areas
-    PRIMARY = "#1DB954"        # Spotify Green for primary actions
-    PRIMARY_HOVER = "#1aa34a"  # Darker green for hover effects
-    SECONDARY = "#f39c12"      # Orange for secondary actions
-    SECONDARY_HOVER = "#d68910"
-    BORDER = "#333333"         # Subtle borders
-    TEXT = "#ffffff"           # Standard white text
-    SUBTEXT = "#aaaaaa"        # Gray for hints/subtitles
-    ERROR = "#ff4444"          # Red for errors
+    """True Obsidian Palette - Ultra Dark."""
+    BG = "#000000"
+    SURFACE = "#0A0A0A"
+    PRIMARY = "#181818"
+    PRIMARY_HOVER = "#333333"  # ⬆️ BUMPED UP: Much brighter charcoal for clear visibility
+    SECONDARY = "#111111"
+    SECONDARY_HOVER = "#2A2A2A" # ⬆️ BUMPED UP
+    BORDER = "#1E1E1E"
+    TEXT = "#B3B3B3"
+    SUBTEXT = "#555555"
+    ERROR = "#7A2E3B"
+    BRAND = "#E295B3"
+    ACCENT = "#E67E22"
 
 class Fonts:
     """Centralized font configurations (Family, Size, Weight)."""

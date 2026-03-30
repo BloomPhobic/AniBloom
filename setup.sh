@@ -3,7 +3,6 @@
 echo "🌸 Welcome to the AniBloom Installer 🌸"
 echo "---------------------------------------"
 
-# 1. Check dependencies
 for req in ani-cli mpv fzf; do
     if ! command -v $req &> /dev/null; then
         echo "❌ ERROR: $req is not installed. Please install it first."
@@ -12,7 +11,6 @@ for req in ani-cli mpv fzf; do
 done
 echo "✅ All system dependencies found!"
 
-# 2. Setup Python Virtual Environment
 echo "📦 Setting up Python virtual environment..."
 python3 -m venv venv
 source venv/bin/activate
@@ -21,7 +19,6 @@ echo "📦 Installing Python libraries..."
 pip install -r requirements.txt -q
 echo "✅ Python libraries installed!"
 
-# 3. Create Desktop Shortcut
 echo "🖥️  Creating application shortcut..."
 APP_DIR_PATH="$HOME/.local/share/applications"
 mkdir -p "$APP_DIR_PATH"
@@ -31,11 +28,10 @@ APP_DIR=$(pwd)
 
 cat > "$DESKTOP_FILE" << EOF
 [Desktop Entry]
-Version=1.0
 Name=AniBloom
 Comment=A modern GUI for ani-cli
 Exec=bash -c "cd $APP_DIR && source venv/bin/activate && python main.py"
-Icon=mpv
+Icon=$INSTALL_DIR/icon.png
 Terminal=false
 Type=Application
 Categories=AudioVideo;Video;Player;

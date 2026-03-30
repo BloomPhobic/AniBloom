@@ -7,7 +7,7 @@ class MainMenu(ctk.CTkFrame):
         self.search_callback = search_callback
         self.history_callback = history_callback
 
-        title = ctk.CTkLabel(self, text="AniBloom", font=Fonts.TITLE, text_color=Colors.PRIMARY)
+        title = ctk.CTkLabel(self, text="AniBloom", font=Fonts.TITLE, text_color=Colors.BRAND)
         title.pack(pady=(80, 10))
 
         sub = ctk.CTkLabel(self, text="Search for any anime to start watching", text_color=Colors.SUBTEXT, font=Fonts.BODY)
@@ -20,7 +20,6 @@ class MainMenu(ctk.CTkFrame):
         self.search_btn = ctk.CTkButton(self, text="Search", width=200, height=40, font=Fonts.BODY_BOLD, fg_color=Colors.PRIMARY, hover_color=Colors.PRIMARY_HOVER, command=self.handle_search)
         self.search_btn.pack(pady=20)
 
-        # --- Tabbed UI Area ---
         self.history_container = ctk.CTkFrame(self, fg_color="transparent")
         self.history_container.pack(pady=(20, 0), fill="x", padx=100)
         
@@ -32,18 +31,88 @@ class MainMenu(ctk.CTkFrame):
         
         self.clear_btn = ctk.CTkButton(self.history_top_bar, text="🗑️ Clear History", width=60, height=28, fg_color=Colors.ERROR, hover_color="#cc0000", font=Fonts.SMALL, command=clear_history_callback)
         self.clear_btn.pack(side="right")
-        
-        # --- NEW: The Tabview ---
-        self.tabview = ctk.CTkTabview(self.history_container, height=220, fg_color=Colors.SURFACE, segmented_button_selected_color=Colors.PRIMARY, segmented_button_selected_hover_color=Colors.PRIMARY_HOVER)
-        self.tabview.pack(fill="x")
-        self.tabview.add("Recent History")
-        self.tabview.add("Favorites")
 
-        self.history_scroll = ctk.CTkScrollableFrame(self.tabview.tab("Recent History"), fg_color="transparent")
+        self.current_tab = "history"
+        
+        self.tab_nav_frame = ctk.CTkFrame(self.history_container, fg_color="transparent")
+        self.tab_nav_frame.pack(fill="x", pady=(10, 5))
+
+        self.tab_buttons_wrapper = ctk.CTkFrame(self.tab_nav_frame, fg_color="transparent")
+        self.tab_buttons_wrapper.pack(anchor="center")
+
+        # --- COMPOSITE HISTORY BUTTON ---
+        self.btn_hist_frame = ctk.CTkFrame(self.tab_buttons_wrapper, fg_color=Colors.SURFACE, corner_radius=6, cursor="hand2")
+        self.btn_hist_frame.pack(side="left", padx=5)
+        
+        # MASSIVE ICON (Size 24)
+        self.lbl_hist_icon = ctk.CTkLabel(self.btn_hist_frame, text="🕒", font=("Helvetica", 32), text_color=Colors.TEXT)
+        self.lbl_hist_icon.pack(side="left", padx=(15, 5), pady=2)
+        
+        # NORMAL TEXT (Using Fonts.BODY_BOLD)
+        self.lbl_hist_text = ctk.CTkLabel(self.btn_hist_frame, text="Recent History", font=Fonts.BODY_BOLD, text_color=Colors.TEXT)
+        self.lbl_hist_text.pack(side="left", padx=(0, 20), pady=10)
+
+        # --- COMPOSITE FAVORITES BUTTON ---
+        self.btn_fav_frame = ctk.CTkFrame(self.tab_buttons_wrapper, fg_color="transparent", corner_radius=6, cursor="hand2")
+        self.btn_fav_frame.pack(side="left", padx=5)
+        
+        # MASSIVE ICON (Size 24)
+        self.lbl_fav_icon = ctk.CTkLabel(self.btn_fav_frame, text="⭐", font=("Helvetica", 40), text_color=Colors.SUBTEXT)
+        self.lbl_fav_icon.pack(side="left", padx=(15, 5), pady=2)
+        
+        # NORMAL TEXT (Using Fonts.BODY_BOLD)
+        self.lbl_fav_text = ctk.CTkLabel(self.btn_fav_frame, text="Favorites", font=Fonts.BODY_BOLD, text_color=Colors.SUBTEXT)
+        self.lbl_fav_text.pack(side="left", padx=(0, 20), pady=8)
+
+        # --- BIND CLICKS & HOVER EFFECTS ---
+        for w in [self.btn_hist_frame, self.lbl_hist_icon, self.lbl_hist_text]:
+            w.bind("<Button-1>", lambda e: self.switch_tab("history"))
+            w.bind("<Enter>", lambda e: self.btn_hist_frame.configure(fg_color=Colors.PRIMARY_HOVER) if self.current_tab == "history" else self.btn_hist_frame.configure(fg_color=Colors.SURFACE))
+            w.bind("<Leave>", lambda e: self.btn_hist_frame.configure(fg_color=Colors.SURFACE) if self.current_tab == "history" else self.btn_hist_frame.configure(fg_color="transparent"))
+
+        for w in [self.btn_fav_frame, self.lbl_fav_icon, self.lbl_fav_text]:
+            w.bind("<Button-1>", lambda e: self.switch_tab("favorites"))
+            w.bind("<Enter>", lambda e: self.btn_fav_frame.configure(fg_color=Colors.PRIMARY_HOVER) if self.current_tab == "favorites" else self.btn_fav_frame.configure(fg_color=Colors.SURFACE))
+            w.bind("<Leave>", lambda e: self.btn_fav_frame.configure(fg_color=Colors.SURFACE) if self.current_tab == "favorites" else self.btn_fav_frame.configure(fg_color="transparent"))
+
+        self.tab_content = ctk.CTkFrame(self.history_container, fg_color="transparent", height=250)
+        self.tab_content.pack(fill="both", expand=True)
+
+        self.history_scroll = ctk.CTkScrollableFrame(self.tab_content, fg_color="transparent")
+        self.fav_scroll = ctk.CTkScrollableFrame(self.tab_content, fg_color="transparent")
+
         self.history_scroll.pack(fill="both", expand=True)
 
-        self.fav_scroll = ctk.CTkScrollableFrame(self.tabview.tab("Favorites"), fg_color="transparent")
-        self.fav_scroll.pack(fill="both", expand=True)
+    def switch_tab(self, tab_name):
+        self.current_tab = tab_name
+        if tab_name == "history":
+            # 1. Update visuals (History Active)
+            self.btn_hist_frame.configure(fg_color=Colors.SURFACE)
+            self.lbl_hist_icon.configure(text_color=Colors.TEXT)
+            self.lbl_hist_text.configure(text_color=Colors.TEXT)
+            
+            # Update visuals (Favorites Inactive)
+            self.btn_fav_frame.configure(fg_color="transparent")
+            self.lbl_fav_icon.configure(text_color=Colors.SUBTEXT)
+            self.lbl_fav_text.configure(text_color=Colors.SUBTEXT)
+            
+            # 2. Swap the lists
+            self.fav_scroll.pack_forget()
+            self.history_scroll.pack(fill="both", expand=True)
+        else:
+            # 1. Update visuals (Favorites Active with Orange text!)
+            self.btn_fav_frame.configure(fg_color=Colors.SURFACE)
+            self.lbl_fav_icon.configure(text_color=Colors.ACCENT)
+            self.lbl_fav_text.configure(text_color=Colors.ACCENT)
+            
+            # Update visuals (History Inactive)
+            self.btn_hist_frame.configure(fg_color="transparent")
+            self.lbl_hist_icon.configure(text_color=Colors.SUBTEXT)
+            self.lbl_hist_text.configure(text_color=Colors.SUBTEXT)
+            
+            # 2. Swap the lists
+            self.history_scroll.pack_forget()
+            self.fav_scroll.pack(fill="both", expand=True)
 
     def handle_search(self, event=None):
         query = self.search_bar.get().strip()
@@ -66,12 +135,16 @@ class MainMenu(ctk.CTkFrame):
             name = item.get('name', 'Unknown')
             ep = item.get('episode', '1')
             
+            # THE REDESIGN: Sleek, clickable cards instead of raw text
             btn = ctk.CTkButton(
-                self.history_scroll, text=f"▶  {name}  |  Last watched: Ep {ep}", anchor="w",
-                fg_color="transparent", hover_color="#3a3a3a", text_color=Colors.TEXT, font=Fonts.BODY,
+                self.history_scroll, text=f" ▶   {name}   •   Ep {ep}", anchor="w",
+                fg_color=Colors.SURFACE, hover_color=Colors.PRIMARY_HOVER,
+                text_color=Colors.TEXT, font=Fonts.BODY,
+                corner_radius=6, border_width=1, border_color=Colors.BORDER,
+                height=38, # Adds nice internal padding
                 command=lambda data=item: self.handle_history_click(data)
             )
-            btn.pack(fill="x", pady=2, padx=5)
+            btn.pack(fill="x", pady=4, padx=8)
 
     def populate_favorites(self, fav_data):
         for widget in self.fav_scroll.winfo_children():
@@ -84,42 +157,20 @@ class MainMenu(ctk.CTkFrame):
         for item in fav_data:
             name = item.get('name', 'Unknown')
             
+            # THE REDESIGN: Sleek cards with the new Orange Accent!
             btn = ctk.CTkButton(
-                self.fav_scroll, text=f"⭐  {name}", anchor="w",
-                fg_color="transparent", hover_color="#3a3a3a", text_color=Colors.SECONDARY, font=Fonts.BODY_BOLD,
+                self.fav_scroll, text=f" ★   {name}", anchor="w",
+                fg_color=Colors.SURFACE, hover_color=Colors.PRIMARY_HOVER,
+                text_color=Colors.ACCENT, font=Fonts.BODY_BOLD,
+                corner_radius=6, border_width=1, border_color=Colors.BORDER,
+                height=38,
                 command=lambda data=item: self.handle_history_click(data)
             )
-            btn.pack(fill="x", pady=2, padx=5)
+            btn.pack(fill="x", pady=4, padx=8)
 
     def handle_history_click(self, item_data):
         self.history_label.configure(text=f"Loading '{item_data.get('name', '')}'...")
         self.history_callback(item_data)
-
-
-class ResultsMenu(ctk.CTkFrame):
-    def __init__(self, master, back_callback, select_callback):
-        super().__init__(master, fg_color="transparent")
-        self.select_callback = select_callback
-
-        nav = ctk.CTkFrame(self, fg_color="transparent")
-        nav.pack(fill="x", pady=10, padx=20)
-
-        ctk.CTkButton(nav, text="< Back", width=60, fg_color="transparent", hover_color=Colors.SURFACE, border_width=1, border_color=Colors.BORDER, text_color=Colors.TEXT, command=back_callback).pack(side="left")
-
-        self.title_label = ctk.CTkLabel(self, text="Search Results", font=Fonts.HEADER, text_color=Colors.TEXT)
-        self.title_label.pack(pady=(10, 20))
-
-        self.scroll_frame = ctk.CTkScrollableFrame(self, width=600, height=400, fg_color=Colors.SURFACE)
-        self.scroll_frame.pack(pady=10)
-
-    def populate(self, query, results):
-        self.title_label.configure(text=f"Results for '{query}'")
-        for widget in self.scroll_frame.winfo_children():
-            widget.destroy()
-        for index, name in enumerate(results):
-            btn = ctk.CTkButton(self.scroll_frame, text=name, anchor="w", fg_color="transparent", hover_color="#3a3a3a", text_color=Colors.TEXT, font=Fonts.BODY, command=lambda n=name, i=index: self.select_callback(n, i))
-            btn.pack(fill="x", pady=2, padx=5)
-
 
 class EpisodeMenu(ctk.CTkFrame):
     def __init__(self, master, back_callback, play_callback, download_callback, fav_callback):
@@ -129,7 +180,7 @@ class EpisodeMenu(ctk.CTkFrame):
         self.fav_callback = fav_callback
         
         self.current_ep_page = 0
-        self.eps_per_page = 26
+        self.eps_per_page = 28
         self.episodes_list = []
         self.watched_episodes = []
         self.total_episodes = 0
@@ -138,56 +189,98 @@ class EpisodeMenu(ctk.CTkFrame):
         self.selected_episodes = set()
 
         nav = ctk.CTkFrame(self, fg_color="transparent")
-        nav.pack(fill="x", pady=5, padx=20)
-        self.back_btn = ctk.CTkButton(nav, text="< Back", width=60, fg_color="transparent", hover_color=Colors.SURFACE, border_width=1, border_color=Colors.BORDER, text_color=Colors.TEXT, command=back_callback)
+        nav.pack(fill="x", pady=10, padx=20)
+        
+        self.back_btn = ctk.CTkButton(
+            nav, text="❮  Back to Results", width=60, font=("Helvetica", 18, "bold"),
+            fg_color="transparent", hover_color=Colors.PRIMARY_HOVER, text_color="#FFFFFF",
+            command=back_callback
+        )
         self.back_btn.pack(side="left")
 
         self.title_frame = ctk.CTkFrame(self, fg_color="transparent")
-        self.title_frame.pack(pady=(5, 5))
+        self.title_frame.pack(pady=(5, 10))
         
         self.title_label = ctk.CTkLabel(self.title_frame, text="Anime Name", font=Fonts.HEADER, text_color=Colors.TEXT, wraplength=600)
         self.title_label.pack(side="left", padx=10)
         
-        self.fav_btn = ctk.CTkButton(self.title_frame, text="☆", width=40, font=("Helvetica", 20), fg_color="transparent", hover_color=Colors.SURFACE, text_color=Colors.SUBTEXT, command=self.handle_fav_click)
+        self.fav_btn = ctk.CTkButton(
+            self.title_frame, text="☆", width=40, font=("Helvetica", 36),
+            fg_color="transparent", hover_color=Colors.BG, text_color=Colors.SUBTEXT,
+            command=self.handle_fav_click
+        )
         self.fav_btn.pack(side="left")
 
         self.mode_frame = ctk.CTkFrame(self, fg_color="transparent")
         self.mode_frame.pack(pady=5)
-        self.toggle_mode_btn = ctk.CTkButton(self.mode_frame, text="🔄 Switch to Download Mode", fg_color=Colors.SECONDARY, hover_color=Colors.SECONDARY_HOVER, command=self.toggle_mode)
+        
+        self.toggle_mode_btn = ctk.CTkButton(
+            self.mode_frame, text="⤓ Switch to Download Mode", font=Fonts.BODY_BOLD,
+            fg_color="transparent", text_color="#FFFFFF", hover_color=Colors.PRIMARY_HOVER,
+            border_width=1, border_color=Colors.BORDER, corner_radius=6,
+            command=self.toggle_mode
+        )
         self.toggle_mode_btn.pack(side="top", pady=5)
         
         self.dl_controls = ctk.CTkFrame(self.mode_frame, fg_color="transparent")
-        self.select_all_btn = ctk.CTkButton(self.dl_controls, text="Select All", width=100, fg_color=Colors.SURFACE, hover_color="#3a3a3a", command=self.select_all_eps)
+        
+        self.select_all_btn = ctk.CTkButton(
+            self.dl_controls, text="Select Page", width=100, font=Fonts.BODY,
+            fg_color=Colors.SURFACE, hover_color=Colors.PRIMARY_HOVER, corner_radius=6,
+            command=self.select_all_eps
+        )
         self.select_all_btn.pack(side="left", padx=5)
-        self.confirm_dl_btn = ctk.CTkButton(self.dl_controls, text="⬇️ Download Selected", width=150, font=Fonts.BODY_BOLD, fg_color=Colors.PRIMARY, hover_color=Colors.PRIMARY_HOVER, command=self.handle_download)
+        
+        self.confirm_dl_btn = ctk.CTkButton(
+            self.dl_controls, text="⬇️ Download Selected", width=160, font=Fonts.BODY_BOLD,
+            fg_color=Colors.PRIMARY, hover_color=Colors.PRIMARY_HOVER,
+            text_color=Colors.ACCENT, border_width=1, border_color=Colors.BORDER, corner_radius=6,
+            command=self.handle_download
+        )
         self.confirm_dl_btn.pack(side="left", padx=5)
 
         self.grid_container = ctk.CTkFrame(self, fg_color="transparent")
-        self.grid_container.pack(pady=5)
+        self.grid_container.pack(pady=10)
+        
         self.grid_frame = ctk.CTkFrame(self.grid_container, fg_color="transparent")
         self.grid_frame.pack()
         
         self.page_nav = ctk.CTkFrame(self.grid_container, fg_color="transparent")
-        self.page_nav.pack(pady=10)
-        self.prev_btn = ctk.CTkButton(self.page_nav, text="< Prev", width=60, fg_color=Colors.SURFACE, hover_color="#3a3a3a", command=self.prev_page)
+        self.page_nav.pack(pady=15)
+        
+        self.prev_btn = ctk.CTkButton(self.page_nav, text="<", width=40, fg_color=Colors.SURFACE, hover_color=Colors.PRIMARY_HOVER, command=self.prev_page)
         self.prev_btn.pack(side="left", padx=10)
-        self.page_label = ctk.CTkLabel(self.page_nav, text="Eps 1-26", font=Fonts.BODY)
+        self.page_label = ctk.CTkLabel(self.page_nav, text="Eps 1-28", font=Fonts.BODY, text_color=Colors.SUBTEXT)
         self.page_label.pack(side="left", padx=10)
-        self.next_btn = ctk.CTkButton(self.page_nav, text="Next >", width=60, fg_color=Colors.SURFACE, hover_color="#3a3a3a", command=self.next_page)
+        self.next_btn = ctk.CTkButton(self.page_nav, text=">", width=40, fg_color=Colors.SURFACE, hover_color=Colors.PRIMARY_HOVER, command=self.next_page)
         self.next_btn.pack(side="left", padx=10)
 
         self.watch_controls = ctk.CTkFrame(self, fg_color="transparent")
-        self.watch_controls.pack(pady=10)
-        ctk.CTkLabel(self.watch_controls, text="Or enter manually:", font=Fonts.BODY, text_color=Colors.SUBTEXT).pack(side="left", padx=10)
-        self.ep_input = ctk.CTkEntry(self.watch_controls, width=60, font=Fonts.BODY, justify="center")
+        self.watch_controls.pack(pady=5)
+        
+        ctk.CTkLabel(self.watch_controls, text="Episode:", font=Fonts.BODY, text_color=Colors.SUBTEXT).pack(side="left", padx=10)
+        
+        self.ep_input = ctk.CTkEntry(
+            self.watch_controls, width=60, font=Fonts.BODY_BOLD, justify="center",
+            fg_color=Colors.SURFACE, border_color=Colors.BORDER, text_color=Colors.TEXT
+        )
         self.ep_input.insert(0, "1")
-        self.ep_input.pack(side="left", padx=10)
+        self.ep_input.pack(side="left", padx=5)
         self.ep_input.bind("<Return>", self.handle_play)
-        self.watch_btn = ctk.CTkButton(self.watch_controls, text="▶ Watch Episode", font=Fonts.BODY_BOLD, fg_color=Colors.PRIMARY, hover_color=Colors.PRIMARY_HOVER, command=self.handle_play)
+        
+        self.watch_btn = ctk.CTkButton(
+            self.watch_controls, text="▶ Watch Now", font=Fonts.BODY_BOLD, width=140,
+            fg_color=Colors.PRIMARY, hover_color=Colors.PRIMARY_HOVER,
+            text_color=Colors.ACCENT, border_width=1, border_color=Colors.BORDER, corner_radius=6,
+            command=self.handle_play
+        )
         self.watch_btn.pack(side="left", padx=15)
 
-        self.console = ctk.CTkTextbox(self, width=650, height=130, text_color=Colors.SUBTEXT, fg_color=Colors.SURFACE)
-        self.console.pack(pady=10)
+        self.console = ctk.CTkTextbox(
+            self, width=650, height=100, text_color=Colors.SUBTEXT,
+            fg_color="transparent", border_width=1, border_color=Colors.BORDER, corner_radius=6
+        )
+        self.console.pack(pady=15)
 
     def handle_fav_click(self):
         is_now_fav = self.fav_callback()
@@ -195,21 +288,22 @@ class EpisodeMenu(ctk.CTkFrame):
 
     def set_fav_visuals(self, is_fav):
         if is_fav:
-            self.fav_btn.configure(text="★", text_color=Colors.SECONDARY) 
+            self.fav_btn.configure(text="★", text_color=Colors.ACCENT)
         else:
-            self.fav_btn.configure(text="☆", text_color=Colors.SUBTEXT)   
+            self.fav_btn.configure(text="☆", text_color=Colors.SUBTEXT)
 
     def toggle_mode(self):
         self.download_mode = not self.download_mode
         if self.download_mode:
-            self.toggle_mode_btn.configure(text="❌ Cancel Download Mode", fg_color=Colors.ERROR, hover_color="#cc0000")
+            self.toggle_mode_btn.configure(text="✕ Cancel Download Mode", text_color=Colors.ERROR)
             self.watch_controls.pack_forget()
             self.dl_controls.pack(side="top", pady=5)
-            self.log("ℹ️ Download Mode active. Click episodes to select them.")
+            self.log("ℹ️ Download Mode active. Click episodes to queue them.")
         else:
-            self.toggle_mode_btn.configure(text="🔄 Switch to Download Mode", fg_color=Colors.SECONDARY, hover_color=Colors.SECONDARY_HOVER)
+            # REDESIGN: Return to pure white when un-toggled!
+            self.toggle_mode_btn.configure(text="⤓ Switch to Download Mode", text_color="#FFFFFF")
             self.dl_controls.pack_forget()
-            self.watch_controls.pack(pady=10)
+            self.watch_controls.pack(pady=5)
             self.selected_episodes.clear()
             self.log("ℹ️ Returned to Watch Mode.")
         self.draw_grid()
@@ -222,7 +316,7 @@ class EpisodeMenu(ctk.CTkFrame):
             self.selected_episodes.add(self.episodes_list[i])
             
         self.draw_grid()
-        self.log("✅ Selected episodes on this page.")
+        self.log("✅ Selected all episodes on this page.")
 
     def handle_download(self):
         if not self.selected_episodes:
@@ -263,29 +357,31 @@ class EpisodeMenu(ctk.CTkFrame):
         page_eps = self.episodes_list[start_idx:end_idx]
         
         for i, ep_str in enumerate(page_eps):
-            # --- THE NEW COLOR LOGIC ---
             if self.download_mode and ep_str in self.selected_episodes:
                 bg = Colors.PRIMARY
                 hover = Colors.PRIMARY_HOVER
-                text_color = Colors.TEXT
+                text_color = Colors.ACCENT
+                border = Colors.ACCENT
             elif ep_str in self.watched_episodes:
-                # Dim the button if it has been watched!
-                bg = Colors.BG 
+                bg = "transparent"
                 hover = Colors.SURFACE
-                text_color = Colors.SUBTEXT 
+                text_color = Colors.SUBTEXT
+                border = Colors.BORDER
             else:
                 bg = Colors.SURFACE
                 hover = Colors.PRIMARY_HOVER
                 text_color = Colors.TEXT
+                border = Colors.BORDER
 
             btn = ctk.CTkButton(
-                self.grid_frame, text=ep_str, width=45, height=40, font=Fonts.BODY_BOLD,
-                fg_color=bg, hover_color=hover, text_color=text_color, border_width=1, border_color=Colors.BORDER,
+                self.grid_frame, text=ep_str, width=48, height=42, font=Fonts.BODY_BOLD,
+                fg_color=bg, hover_color=hover, text_color=text_color,
+                border_width=1, border_color=border, corner_radius=6,
                 command=lambda e=ep_str: self.grid_click(e)
             )
             row = i // cols
             col = i % cols
-            btn.grid(row=row, column=col, padx=4, pady=4)
+            btn.grid(row=row, column=col, padx=5, pady=5)
 
     def next_page(self):
         self.current_ep_page += 1
@@ -298,11 +394,11 @@ class EpisodeMenu(ctk.CTkFrame):
 
     def setup(self, name, episodes_list, is_fav, watched_eps):
         self.episodes_list = [str(e) for e in episodes_list]
-        self.watched_episodes = [str(e) for e in watched_eps] # Save the watched data!
+        self.watched_episodes = [str(e) for e in watched_eps]
         self.total_episodes = len(self.episodes_list)
         
         self.title_label.configure(text=name)
-        self.set_fav_visuals(is_fav) 
+        self.set_fav_visuals(is_fav)
         self.console.delete("1.0", "end")
         
         if self.download_mode:
@@ -333,6 +429,49 @@ class EpisodeMenu(ctk.CTkFrame):
         self.watch_btn.configure(state="disabled", text="Extracting...")
         self.play_callback(ep, self)
 
+class ResultsMenu(ctk.CTkFrame):
+    def __init__(self, master, back_callback, select_callback):
+        super().__init__(master, fg_color="transparent")
+        self.select_callback = select_callback
+
+        nav = ctk.CTkFrame(self, fg_color="transparent")
+        nav.pack(fill="x", pady=10, padx=20)
+
+        ctk.CTkButton(
+            nav, text="❮  Back to Search", width=60, font=("Helvetica", 18, "bold"),
+            fg_color="transparent", hover_color=Colors.PRIMARY_HOVER, text_color="#FFFFFF",
+            command=back_callback
+        ).pack(side="left")
+
+        self.title_label = ctk.CTkLabel(self, text="Search Results", font=Fonts.HEADER, text_color=Colors.TEXT)
+        self.title_label.pack(pady=(10, 20))
+
+        self.scroll_frame = ctk.CTkScrollableFrame(self, fg_color="transparent")
+        self.scroll_frame.pack(pady=10, fill="both", expand=True, padx=40)
+
+    def populate(self, query, results):
+        self.title_label.configure(text=f"Results for '{query}'")
+        for widget in self.scroll_frame.winfo_children():
+            widget.destroy()
+            
+        for index, name in enumerate(results):
+            btn = ctk.CTkButton(
+                self.scroll_frame, text=f"  {index + 1}.   {name}", anchor="w",
+                fg_color=Colors.SURFACE, hover_color=Colors.PRIMARY_HOVER,
+                text_color=Colors.TEXT, font=Fonts.BODY,
+                corner_radius=6, border_width=1, border_color=Colors.BORDER,
+                height=42,
+                command=lambda n=name, i=index: self.select_callback(n, i)
+            )
+            btn.pack(fill="x", pady=5, padx=10)
+
+            # FIX 2: Force the buttons to pass scroll events to the background frame!
+            # Linux scroll bindings (Hyprland/Wayland/X11)
+            btn.bind("<Button-4>", lambda e: self.scroll_frame._parent_canvas.yview_scroll(-1, "units"))
+            btn.bind("<Button-5>", lambda e: self.scroll_frame._parent_canvas.yview_scroll(1, "units"))
+            # Windows/Mac scroll binding (Just in case you share your app!)
+            btn.bind("<MouseWheel>", lambda e: self.scroll_frame._parent_canvas.yview_scroll(int(-1*(e.delta/120)), "units"))
+
 class SettingsWindow(ctk.CTkToplevel):
     def __init__(self, master, current_quality, current_path, save_callback, browse_callback):
         super().__init__(master)
@@ -343,15 +482,16 @@ class SettingsWindow(ctk.CTkToplevel):
         self.resizable(False, False)
 
         # --- CENTER THE WINDOW ---
-        self.update_idletasks() # Ensure geometry is calculated
+        self.update_idletasks()
         x = (self.winfo_screenwidth() // 2) - (450 // 2)
         y = (self.winfo_screenheight() // 2) - (300 // 2)
-        self.geometry(f"+{x}+{y}") # Tell the OS to place it here
+        self.geometry(f"+{x}+{y}")
+
+        self.bind("<Escape>", lambda event: self.destroy())
 
         title = ctk.CTkLabel(self, text="⚙️ Preferences", font=Fonts.HEADER, text_color=Colors.TEXT)
         title.pack(pady=(20, 20))
 
-        # (Rest of your quality and path code remains the same as before...)
         qual_frame = ctk.CTkFrame(self, fg_color="transparent")
         qual_frame.pack(fill="x", padx=30, pady=10)
         ctk.CTkLabel(qual_frame, text="Preferred Quality:", font=Fonts.BODY_BOLD, text_color=Colors.TEXT).pack(side="left")
