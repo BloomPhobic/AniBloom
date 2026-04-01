@@ -4,6 +4,8 @@ __pycache__/
 
 watch_history.json
 favorites.json
+downloads.json
+settings.json
 
 fzf
 .ani_results.tmp

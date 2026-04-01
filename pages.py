@@ -44,11 +44,9 @@ class MainMenu(ctk.CTkFrame):
         self.btn_hist_frame = ctk.CTkFrame(self.tab_buttons_wrapper, fg_color=Colors.SURFACE, corner_radius=6, cursor="hand2")
         self.btn_hist_frame.pack(side="left", padx=5)
         
-        # MASSIVE ICON (Size 24)
-        self.lbl_hist_icon = ctk.CTkLabel(self.btn_hist_frame, text="🕒", font=("Helvetica", 32), text_color=Colors.TEXT)
+        self.lbl_hist_icon = ctk.CTkLabel(self.btn_hist_frame, text="🕒", font=("Roboto", 32), text_color=Colors.TEXT)
         self.lbl_hist_icon.pack(side="left", padx=(15, 5), pady=2)
         
-        # NORMAL TEXT (Using Fonts.BODY_BOLD)
         self.lbl_hist_text = ctk.CTkLabel(self.btn_hist_frame, text="Recent History", font=Fonts.BODY_BOLD, text_color=Colors.TEXT)
         self.lbl_hist_text.pack(side="left", padx=(0, 20), pady=10)
 
@@ -56,11 +54,9 @@ class MainMenu(ctk.CTkFrame):
         self.btn_fav_frame = ctk.CTkFrame(self.tab_buttons_wrapper, fg_color="transparent", corner_radius=6, cursor="hand2")
         self.btn_fav_frame.pack(side="left", padx=5)
         
-        # MASSIVE ICON (Size 24)
-        self.lbl_fav_icon = ctk.CTkLabel(self.btn_fav_frame, text="⭐", font=("Helvetica", 40), text_color=Colors.SUBTEXT)
+        self.lbl_fav_icon = ctk.CTkLabel(self.btn_fav_frame, text="⭐", font=("Roboto", 40), text_color=Colors.SUBTEXT)
         self.lbl_fav_icon.pack(side="left", padx=(15, 5), pady=2)
         
-        # NORMAL TEXT (Using Fonts.BODY_BOLD)
         self.lbl_fav_text = ctk.CTkLabel(self.btn_fav_frame, text="Favorites", font=Fonts.BODY_BOLD, text_color=Colors.SUBTEXT)
         self.lbl_fav_text.pack(side="left", padx=(0, 20), pady=8)
 
@@ -83,34 +79,36 @@ class MainMenu(ctk.CTkFrame):
 
         self.history_scroll.pack(fill="both", expand=True)
 
+        # --- NEW: THE SIGNATURE ---
+        # Anchored to the bottom right (se = south-east). Changed to BloomPhobic and Pure White!
+        self.signature_label = ctk.CTkLabel(
+            self, text="🌸 Crafted by BloomPhobic", 
+            font=Fonts.SIGNATURE, text_color="#FFFFFF"
+        )
+        self.signature_label.place(relx=0.98, rely=0.98, anchor="se")
+
     def switch_tab(self, tab_name):
         self.current_tab = tab_name
         if tab_name == "history":
-            # 1. Update visuals (History Active)
             self.btn_hist_frame.configure(fg_color=Colors.SURFACE)
             self.lbl_hist_icon.configure(text_color=Colors.TEXT)
             self.lbl_hist_text.configure(text_color=Colors.TEXT)
             
-            # Update visuals (Favorites Inactive)
             self.btn_fav_frame.configure(fg_color="transparent")
             self.lbl_fav_icon.configure(text_color=Colors.SUBTEXT)
             self.lbl_fav_text.configure(text_color=Colors.SUBTEXT)
             
-            # 2. Swap the lists
             self.fav_scroll.pack_forget()
             self.history_scroll.pack(fill="both", expand=True)
         else:
-            # 1. Update visuals (Favorites Active with Orange text!)
             self.btn_fav_frame.configure(fg_color=Colors.SURFACE)
             self.lbl_fav_icon.configure(text_color=Colors.ACCENT)
             self.lbl_fav_text.configure(text_color=Colors.ACCENT)
             
-            # Update visuals (History Inactive)
             self.btn_hist_frame.configure(fg_color="transparent")
             self.lbl_hist_icon.configure(text_color=Colors.SUBTEXT)
             self.lbl_hist_text.configure(text_color=Colors.SUBTEXT)
             
-            # 2. Swap the lists
             self.history_scroll.pack_forget()
             self.fav_scroll.pack(fill="both", expand=True)
 
@@ -135,13 +133,12 @@ class MainMenu(ctk.CTkFrame):
             name = item.get('name', 'Unknown')
             ep = item.get('episode', '1')
             
-            # THE REDESIGN: Sleek, clickable cards instead of raw text
             btn = ctk.CTkButton(
                 self.history_scroll, text=f" ▶   {name}   •   Ep {ep}", anchor="w",
                 fg_color=Colors.SURFACE, hover_color=Colors.PRIMARY_HOVER,
                 text_color=Colors.TEXT, font=Fonts.BODY,
                 corner_radius=6, border_width=1, border_color=Colors.BORDER,
-                height=38, # Adds nice internal padding
+                height=38,
                 command=lambda data=item: self.handle_history_click(data)
             )
             btn.pack(fill="x", pady=4, padx=8)
@@ -157,7 +154,6 @@ class MainMenu(ctk.CTkFrame):
         for item in fav_data:
             name = item.get('name', 'Unknown')
             
-            # THE REDESIGN: Sleek cards with the new Orange Accent!
             btn = ctk.CTkButton(
                 self.fav_scroll, text=f" ★   {name}", anchor="w",
                 fg_color=Colors.SURFACE, hover_color=Colors.PRIMARY_HOVER,
@@ -192,7 +188,7 @@ class EpisodeMenu(ctk.CTkFrame):
         nav.pack(fill="x", pady=10, padx=20)
         
         self.back_btn = ctk.CTkButton(
-            nav, text="❮  Back to Results", width=60, font=("Helvetica", 18, "bold"),
+            nav, text="❮  Back to Results", width=60, font=("Roboto", 18, "bold"),
             fg_color="transparent", hover_color=Colors.PRIMARY_HOVER, text_color="#FFFFFF",
             command=back_callback
         )
@@ -205,7 +201,7 @@ class EpisodeMenu(ctk.CTkFrame):
         self.title_label.pack(side="left", padx=10)
         
         self.fav_btn = ctk.CTkButton(
-            self.title_frame, text="☆", width=40, font=("Helvetica", 36),
+            self.title_frame, text="☆", width=40, font=("Roboto", 36),
             fg_color="transparent", hover_color=Colors.BG, text_color=Colors.SUBTEXT,
             command=self.handle_fav_click
         )
@@ -300,7 +296,6 @@ class EpisodeMenu(ctk.CTkFrame):
             self.dl_controls.pack(side="top", pady=5)
             self.log("ℹ️ Download Mode active. Click episodes to queue them.")
         else:
-            # REDESIGN: Return to pure white when un-toggled!
             self.toggle_mode_btn.configure(text="⤓ Switch to Download Mode", text_color="#FFFFFF")
             self.dl_controls.pack_forget()
             self.watch_controls.pack(pady=5)
@@ -438,7 +433,7 @@ class ResultsMenu(ctk.CTkFrame):
         nav.pack(fill="x", pady=10, padx=20)
 
         ctk.CTkButton(
-            nav, text="❮  Back to Search", width=60, font=("Helvetica", 18, "bold"),
+            nav, text="❮  Back to Search", width=60, font=("Roboto", 18, "bold"),
             fg_color="transparent", hover_color=Colors.PRIMARY_HOVER, text_color="#FFFFFF",
             command=back_callback
         ).pack(side="left")
@@ -465,11 +460,8 @@ class ResultsMenu(ctk.CTkFrame):
             )
             btn.pack(fill="x", pady=5, padx=10)
 
-            # FIX 2: Force the buttons to pass scroll events to the background frame!
-            # Linux scroll bindings (Hyprland/Wayland/X11)
             btn.bind("<Button-4>", lambda e: self.scroll_frame._parent_canvas.yview_scroll(-1, "units"))
             btn.bind("<Button-5>", lambda e: self.scroll_frame._parent_canvas.yview_scroll(1, "units"))
-            # Windows/Mac scroll binding (Just in case you share your app!)
             btn.bind("<MouseWheel>", lambda e: self.scroll_frame._parent_canvas.yview_scroll(int(-1*(e.delta/120)), "units"))
 
 class SettingsWindow(ctk.CTkToplevel):
@@ -481,7 +473,6 @@ class SettingsWindow(ctk.CTkToplevel):
         self.attributes("-topmost", True)
         self.resizable(False, False)
 
-        # --- CENTER THE WINDOW ---
         self.update_idletasks()
         x = (self.winfo_screenwidth() // 2) - (450 // 2)
         y = (self.winfo_screenheight() // 2) - (300 // 2)
